@@ -10,13 +10,17 @@ from src.domain.repositories.file_storage import FileStorage
 from src.infrastructure.files.csv_dataset_loader import CsvDatasetLoader
 from src.infrastructure.files.local_file_storage import LocalFileStorage
 from src.infrastructure.files.matplotlib_chart_generator import MatplotlibChartGenerator
+from src.infrastructure.llm.mock_llm_client import MockLlmClient
 from src.infrastructure.llm.openai_llm_client import OpenAiLlmClient
 from src.infrastructure.persistence.sqlite_dataset_repository import (
     SqliteDatasetRepository,
 )
 from src.infrastructure.rag.in_memory_vector_store import InMemoryVectorStore
+from src.infrastructure.rag.mock_embedding_function import MockEmbeddingFunction
 from src.infrastructure.rag.openai_embedding_function import OpenAiEmbeddingFunction
+from src.infrastructure.rag.embedding_function import EmbeddingFunction
 from src.shared.config.settings import settings
+from src.shared.config.settings import Settings
 
 _dataset_repository = SqliteDatasetRepository(db_path=settings.database_url)
 _dataset_loader = CsvDatasetLoader()
@@ -24,11 +28,25 @@ _chart_generator = MatplotlibChartGenerator()
 _file_storage = LocalFileStorage(base_dir=settings.upload_dir)
 
 
-def _create_vector_store() -> InMemoryVectorStore:
-    embed_fn = OpenAiEmbeddingFunction(
-        api_key=settings.openai_api_key, model=settings.embedding_model,
+def build_embedding_function(config: Settings) -> EmbeddingFunction:
+    if config.llm_mode == "mock":
+        return MockEmbeddingFunction()
+    return OpenAiEmbeddingFunction(
+        api_key=config.openai_api_key, model=config.embedding_model,
     )
+
+
+def build_vector_store(config: Settings) -> InMemoryVectorStore:
+    embed_fn = build_embedding_function(config)
     return InMemoryVectorStore(embed_fn=embed_fn)
+
+
+def build_llm_client(config: Settings) -> LlmClient:
+    if config.llm_mode == "mock":
+        return MockLlmClient()
+    return OpenAiLlmClient(
+        api_key=config.openai_api_key, model=config.openai_model
+    )
 
 
 _vector_store: InMemoryVectorStore | None = None
@@ -37,13 +55,11 @@ _vector_store: InMemoryVectorStore | None = None
 def _get_vector_store() -> InMemoryVectorStore:
     global _vector_store
     if _vector_store is None:
-        _vector_store = _create_vector_store()
+        _vector_store = build_vector_store(settings)
     return _vector_store
 
 
-_llm_client = OpenAiLlmClient(
-    api_key=settings.openai_api_key, model=settings.openai_model
-)
+_llm_client: LlmClient | None = None
 
 
 def get_dataset_repository() -> DatasetRepository:
@@ -63,6 +79,9 @@ def get_file_storage() -> FileStorage:
 
 
 def get_llm_client() -> LlmClient:
+    global _llm_client
+    if _llm_client is None:
+        _llm_client = build_llm_client(settings)
     return _llm_client
 
 

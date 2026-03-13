@@ -12,6 +12,7 @@ from src.presentation.api.dependencies import (
     get_document_retriever,
     get_llm_client,
 )
+from src.shared.exceptions.ai import ApiKeyMissingError, InsufficientQuotaError
 
 
 def _create_test_client() -> tuple[TestClient, InMemoryDatasetRepository]:
@@ -202,6 +203,27 @@ class TestVisualizationsEndpoint:
         chart_types = {c["chart_type"] for c in data["charts"]}
         assert "dtype_distribution" in chart_types
         assert "histogram" in chart_types
+        assert data["charts"][0]["image_base64"]
+        assert "interactive_spec" in data["charts"][0]
+
+    def test_visualizations_include_interactive_spec_when_available(self) -> None:
+        import os
+
+        csv_path = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__), "..", "..", "data", "sample", "test_data.csv"
+            )
+        )
+        payload = {"name": "test", "file_path": csv_path, "source_type": "csv"}
+        created = self.client.post("/datasets", json=payload).json()
+
+        response = self.client.get(f"/datasets/{created['id']}/visualizations")
+
+        assert response.status_code == 200
+        chart = response.json()["charts"][0]
+        assert chart["interactive_spec"] is not None
+        assert chart["interactive_spec"]["chart_kind"] in {"bar", "column"}
+        assert isinstance(chart["interactive_spec"]["series"], list)
 
     def test_visualizations_nonexistent_returns_404(self) -> None:
         response = self.client.get("/datasets/nonexistent/visualizations")
@@ -360,6 +382,11 @@ class _FakeLlmClient(LlmClient):
         return "Resumen ejecutivo de prueba."
 
 
+class _QuotaLlmClient(LlmClient):
+    def generate(self, system_prompt: str, user_prompt: str) -> str:
+        raise InsufficientQuotaError(service="llm")
+
+
 class TestExecutiveSummaryEndpoint:
 
     def setup_method(self) -> None:
@@ -424,12 +451,33 @@ class TestExecutiveSummaryEndpoint:
 
         assert response.status_code == 422
 
+    def test_executive_summary_returns_structured_quota_error(self) -> None:
+        created = self._create_with_csv()
+        self.client.app.dependency_overrides[get_llm_client] = lambda: _QuotaLlmClient()  # type: ignore[union-attr]
+
+        response = self.client.post(
+            f"/datasets/{created['id']}/executive-summary",
+            json={},
+        )
+
+        assert response.status_code == 503
+        data = response.json()
+        assert data["code"] == "insufficient_quota"
+        assert data["category"] == "billing"
+        assert data["service"] == "llm"
+        assert data["retryable"] is False
+
 
 class _FakeRetriever(DocumentRetriever):
     def retrieve(self, query: str, top_k: int = 5) -> list[DocumentChunk]:
         return [
             DocumentChunk(source="test.md", content="Contexto de prueba", chunk_index=0),
         ]
+
+
+class _FailingRetriever(DocumentRetriever):
+    def retrieve(self, query: str, top_k: int = 5) -> list[DocumentChunk]:
+        raise ApiKeyMissingError(service="embeddings")
 
 
 class TestRagQueryEndpoint:
@@ -484,6 +532,22 @@ class TestRagQueryEndpoint:
         )
 
         assert response.status_code == 422
+
+    def test_rag_query_returns_structured_embedding_error(self) -> None:
+        created = self._create_with_csv()
+        self.client.app.dependency_overrides[get_document_retriever] = lambda: _FailingRetriever()  # type: ignore[union-attr]
+
+        response = self.client.post(
+            f"/datasets/{created['id']}/rag-query",
+            json={"question": "pregunta"},
+        )
+
+        assert response.status_code == 503
+        data = response.json()
+        assert data["code"] == "api_key_missing"
+        assert data["category"] == "configuration"
+        assert data["service"] == "embeddings"
+        assert data["retryable"] is False
 
 
 class TestEnrichedSummaryEndpoint:

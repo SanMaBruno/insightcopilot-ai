@@ -5,10 +5,6 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from src.application.use_cases.index_document_use_case import IndexDocumentUseCase
 from src.domain.repositories.document_indexer import DocumentIndexer
 from src.domain.repositories.file_storage import FileStorage
-from src.infrastructure.rag.openai_embedding_function import (
-    EmbeddingConfigurationError,
-    EmbeddingGenerationError,
-)
 from src.presentation.api.dependencies import get_document_indexer, get_file_storage
 from src.presentation.api.schemas.document import (
     DocumentIndexRequest,
@@ -65,16 +61,11 @@ def index_document(
 
     source = os.path.basename(body.file_path)
 
-    try:
-        count = IndexDocumentUseCase(indexer=indexer).execute(
-            source=source,
-            content=content,
-            chunk_size=body.chunk_size,
-            overlap=body.overlap,
-        )
-    except EmbeddingConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=exc.message) from exc
-    except EmbeddingGenerationError as exc:
-        raise HTTPException(status_code=502, detail=exc.message) from exc
+    count = IndexDocumentUseCase(indexer=indexer).execute(
+        source=source,
+        content=content,
+        chunk_size=body.chunk_size,
+        overlap=body.overlap,
+    )
 
     return DocumentIndexResponse(source=source, chunks_indexed=count)

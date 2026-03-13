@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { postRagQuery } from "../api/datasets";
+import { getFeatureAvailabilityMessage, getFeatureErrorMessage } from "../api/errors";
 import type { RagQueryResponse } from "../types/api";
 import { ErrorBox, InfoBanner } from "./ui";
 
@@ -16,10 +17,11 @@ export default function RagQuerySection({ datasetId }: { datasetId: string }) {
     try {
       setLoading(true);
       setError(null);
+      setResult(null);
       const data = await postRagQuery(datasetId, question);
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error");
+      setError(getFeatureErrorMessage("rag", err));
     } finally {
       setLoading(false);
     }
@@ -28,7 +30,7 @@ export default function RagQuerySection({ datasetId }: { datasetId: string }) {
   return (
     <div>
       <InfoBanner>
-        Requiere OPENAI_API_KEY y documentos indexados. Combina datos del dataset con documentos para responder preguntas.
+        {getFeatureAvailabilityMessage("rag")}
       </InfoBanner>
 
       <form onSubmit={handleSubmit} className="flex gap-3 mb-6">
@@ -50,10 +52,18 @@ export default function RagQuerySection({ datasetId }: { datasetId: string }) {
       </form>
 
       {error && <ErrorBox message={error} />}
+      {loading && (
+        <p className="text-sm text-gray-500 mb-4">
+          Consultando el contexto analítico y documental...
+        </p>
+      )}
 
       {result && (
         <div className="space-y-4">
           <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <p className="text-sm text-emerald-700 mb-3">
+              Respuesta generada correctamente.
+            </p>
             <p className="text-gray-900">{result.answer}</p>
           </div>
 

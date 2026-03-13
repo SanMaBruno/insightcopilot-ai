@@ -1,15 +1,8 @@
 from __future__ import annotations
 
 from src.domain.llm_client import LlmClient
-from src.shared.exceptions.base import DomainError
-
-
-class LlmConfigurationError(DomainError):
-    pass
-
-
-class LlmGenerationError(DomainError):
-    pass
+from src.infrastructure.openai_error_mapper import map_openai_error
+from src.shared.exceptions.ai import ApiKeyMissingError, ProviderClientMissingError
 
 
 class OpenAiLlmClient(LlmClient):
@@ -20,17 +13,11 @@ class OpenAiLlmClient(LlmClient):
 
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         if not self._api_key:
-            raise LlmConfigurationError(
-                "OPENAI_API_KEY no está configurada. "
-                "Agregala al archivo .env para usar resúmenes ejecutivos."
-            )
+            raise ApiKeyMissingError(service="llm")
         try:
             import openai
         except ImportError as exc:
-            raise LlmConfigurationError(
-                "El paquete 'openai' no está instalado. Ejecuta: pip install openai"
-            ) from exc
-
+            raise ProviderClientMissingError(service="llm") from exc
         client = openai.OpenAI(api_key=self._api_key)
         try:
             response = client.chat.completions.create(
@@ -42,14 +29,8 @@ class OpenAiLlmClient(LlmClient):
                 max_tokens=1024,
                 temperature=0.3,
             )
-        except openai.AuthenticationError as exc:
-            raise LlmConfigurationError(
-                "API key de OpenAI inválida."
-            ) from exc
         except openai.OpenAIError as exc:
-            raise LlmGenerationError(
-                f"Error al generar resumen con OpenAI: {exc}"
-            ) from exc
+            raise map_openai_error(exc, service="llm") from exc
 
         choice = response.choices[0]
         return choice.message.content or ""

@@ -1,4 +1,5 @@
 import os
+from typing import Literal
 
 from pydantic_settings import BaseSettings
 
@@ -10,6 +11,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     upload_dir: str = os.path.join(_PROJECT_ROOT, "data", "uploads")
     database_url: str = os.path.join(_PROJECT_ROOT, "data", "insightcopilot.db")
+    llm_mode: Literal["openai", "mock"] = "openai"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-small"

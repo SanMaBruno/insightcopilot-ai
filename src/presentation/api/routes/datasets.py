@@ -32,11 +32,6 @@ from src.domain.repositories.document_retriever import DocumentRetriever
 from src.domain.repositories.file_storage import FileStorage
 from src.infrastructure.files.csv_dataset_loader import FileLoadError
 from src.infrastructure.files.matplotlib_chart_generator import ChartGenerationError
-from src.infrastructure.llm.openai_llm_client import LlmConfigurationError, LlmGenerationError
-from src.infrastructure.rag.openai_embedding_function import (
-    EmbeddingConfigurationError,
-    EmbeddingGenerationError,
-)
 from src.presentation.api.dependencies import (
     get_chart_generator,
     get_dataset_loader,
@@ -60,7 +55,9 @@ from src.presentation.api.schemas.dataset_profile import (
 )
 from src.presentation.api.schemas.dataset_visualization import (
     ChartResultResponse,
+    ChartSeriesResponse,
     DatasetVisualizationResponse,
+    InteractiveChartSpecResponse,
 )
 from src.presentation.api.schemas.executive_summary import (
     ExecutiveSummaryRequest,
@@ -82,6 +79,26 @@ def _to_response(dataset) -> DatasetResponse:
         file_path=dataset.file_path,
         source_type=dataset.source_type,
         created_at=dataset.created_at,
+    )
+
+
+def _to_interactive_chart_spec(spec) -> InteractiveChartSpecResponse:
+    return InteractiveChartSpecResponse(
+        chart_kind=spec.chart_kind,
+        subtitle=spec.subtitle,
+        categories=list(spec.categories),
+        series=[
+            ChartSeriesResponse(
+                name=series.name,
+                data=list(series.data),
+                color=series.color,
+            )
+            for series in spec.series
+        ],
+        x_axis_label=spec.x_axis_label,
+        y_axis_label=spec.y_axis_label,
+        tooltip_suffix=spec.tooltip_suffix,
+        source_label=spec.source_label,
     )
 
 
@@ -215,6 +232,11 @@ def dataset_visualizations(
                 title=c.title,
                 columns=list(c.columns),
                 image_base64=c.image_base64,
+                interactive_spec=(
+                    _to_interactive_chart_spec(c.interactive_spec)
+                    if c.interactive_spec is not None
+                    else None
+                ),
             )
             for c in viz.charts
         ],
@@ -268,10 +290,6 @@ def executive_summary(
         raise HTTPException(status_code=404, detail=exc.message) from exc
     except FileLoadError as exc:
         raise HTTPException(status_code=422, detail=exc.message) from exc
-    except LlmConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=exc.message) from exc
-    except LlmGenerationError as exc:
-        raise HTTPException(status_code=502, detail=exc.message) from exc
     return ExecutiveSummaryResponse(
         dataset_id=result.dataset_id,
         audience=result.audience,
@@ -299,12 +317,6 @@ def rag_query(
         raise HTTPException(status_code=404, detail=exc.message) from exc
     except FileLoadError as exc:
         raise HTTPException(status_code=422, detail=exc.message) from exc
-    except LlmConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=exc.message) from exc
-    except (LlmGenerationError, EmbeddingGenerationError) as exc:
-        raise HTTPException(status_code=502, detail=exc.message) from exc
-    except EmbeddingConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=exc.message) from exc
     return RagQueryResponse(
         dataset_id=result.dataset_id,
         question=result.question,
@@ -342,12 +354,6 @@ def enriched_summary(
         raise HTTPException(status_code=404, detail=exc.message) from exc
     except FileLoadError as exc:
         raise HTTPException(status_code=422, detail=exc.message) from exc
-    except LlmConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=exc.message) from exc
-    except (LlmGenerationError, EmbeddingGenerationError) as exc:
-        raise HTTPException(status_code=502, detail=exc.message) from exc
-    except EmbeddingConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=exc.message) from exc
     return ExecutiveSummaryResponse(
         dataset_id=result.dataset_id,
         audience=result.audience,

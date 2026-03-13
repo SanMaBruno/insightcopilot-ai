@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { postExecutiveSummary } from "../api/datasets";
+import { getFeatureAvailabilityMessage, getFeatureErrorMessage } from "../api/errors";
 import type { ExecutiveSummary } from "../types/api";
 import { ErrorBox, InfoBanner } from "./ui";
 
@@ -14,6 +15,7 @@ export default function ExecutiveSummarySection({ datasetId }: { datasetId: stri
     try {
       setLoading(true);
       setError(null);
+      setSummary(null);
       const result = await postExecutiveSummary(datasetId, {
         audience,
         tone,
@@ -21,7 +23,7 @@ export default function ExecutiveSummarySection({ datasetId }: { datasetId: stri
       });
       setSummary(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error");
+      setError(getFeatureErrorMessage("summary", err));
     } finally {
       setLoading(false);
     }
@@ -30,7 +32,7 @@ export default function ExecutiveSummarySection({ datasetId }: { datasetId: stri
   return (
     <div>
       <InfoBanner>
-        Requiere OPENAI_API_KEY configurada en el backend. Genera un resumen ejecutivo con GPT.
+        {getFeatureAvailabilityMessage("summary")}
       </InfoBanner>
 
       <div className="flex gap-3 items-end mb-6">
@@ -62,9 +64,17 @@ export default function ExecutiveSummarySection({ datasetId }: { datasetId: stri
       </div>
 
       {error && <ErrorBox message={error} />}
+      {loading && (
+        <p className="text-sm text-gray-500 mb-4">
+          Generando resumen con el servicio configurado...
+        </p>
+      )}
 
       {summary && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <p className="text-sm text-emerald-700 mb-3">
+            Resumen generado correctamente.
+          </p>
           <p className="text-xs text-gray-500 mb-3">
             Para: {summary.audience} · Tono: {summary.tone}
           </p>

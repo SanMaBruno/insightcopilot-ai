@@ -150,6 +150,13 @@ docker compose up --build
 # Backend disponible en http://localhost:8000
 ```
 
+### Frontend env local
+
+```bash
+cd frontend
+cp .env.example .env
+```
+
 ---
 
 ## Demo rápida
@@ -236,11 +243,29 @@ insightcopilot-ai/
 |---|---|---|
 | `APP_ENV` | Entorno de ejecución | `development` |
 | `LOG_LEVEL` | Nivel de logging | `INFO` |
+| `LLM_MODE` | Modo de IA (`openai` o `mock`) | `openai` |
 | `OPENAI_API_KEY` | API key de OpenAI (opcional) | — |
 | `OPENAI_MODEL` | Modelo para texto | `gpt-4o-mini` |
 | `EMBEDDING_MODEL` | Modelo para embeddings | `text-embedding-3-small` |
 | `DATABASE_URL` | Ruta SQLite | `data/insightcopilot.db` |
 | `UPLOAD_DIR` | Directorio de uploads | `data/uploads` |
+
+### Frontend
+
+| Variable | Descripción | Default |
+|---|---|---|
+| `VITE_API_BASE_URL` | URL pública del backend | `/api` en local con proxy |
+
+---
+
+## Deploy
+
+Ruta recomendada para portafolio:
+
+- Backend en Render
+- Frontend en Vercel
+
+Guía paso a paso: [`docs/deploy.md`](docs/deploy.md)
 
 ---
 
@@ -258,6 +283,9 @@ insightcopilot-ai/
 - [x] Docker ready
 
 ### Próximos pasos
+- [ ] Deploy público/semi-público
+- [ ] Validación end-to-end post deploy
+- [ ] README con URLs públicas y release final
 - [ ] Deploy público (Railway / Render)
 - [ ] Tests de integración end-to-end
 - [ ] Upload de documentos desde frontend

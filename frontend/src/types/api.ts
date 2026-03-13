@@ -45,11 +45,29 @@ export interface ChartResult {
   title: string;
   columns: string[];
   image_base64: string;
+  interactive_spec?: InteractiveChartSpec | null;
 }
 
 export interface DatasetVisualization {
   dataset_id: string;
   charts: ChartResult[];
+}
+
+export interface ChartSeries {
+  name: string;
+  data: number[];
+  color?: string | null;
+}
+
+export interface InteractiveChartSpec {
+  chart_kind: string;
+  subtitle: string;
+  categories: string[];
+  series: ChartSeries[];
+  x_axis_label: string;
+  y_axis_label: string;
+  tooltip_suffix: string;
+  source_label: string;
 }
 
 // ── Analytical Query ─────────────────────────────────────

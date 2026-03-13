@@ -60,6 +60,29 @@ class TestMatplotlibChartGenerator:
             assert chart.title
             assert len(chart.columns) >= 1
 
+    def test_each_chart_exposes_interactive_spec(self) -> None:
+        charts = self.generator.generate(_CSV_PATH)
+
+        for chart in charts:
+            assert chart.interactive_spec is not None
+            assert chart.interactive_spec.categories
+            assert chart.interactive_spec.series
+
+    def test_top_values_uses_bar_spec(self) -> None:
+        charts = self.generator.generate(_CSV_PATH)
+        top_values = next(c for c in charts if c.chart_type == "top_values")
+
+        assert top_values.interactive_spec is not None
+        assert top_values.interactive_spec.chart_kind == "bar"
+
+    def test_histogram_builds_bucket_categories(self) -> None:
+        charts = self.generator.generate(_CSV_PATH)
+        histogram = next(c for c in charts if c.chart_type == "histogram")
+
+        assert histogram.interactive_spec is not None
+        assert len(histogram.interactive_spec.categories) == 20
+        assert histogram.interactive_spec.y_axis_label == "Frecuencia"
+
     def test_raises_on_missing_file(self) -> None:
         with pytest.raises(ChartGenerationError, match="no encontrado"):
             self.generator.generate("/no/existe.csv")

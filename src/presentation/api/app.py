@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
 
     logger = logging.getLogger(__name__)
     logger.info("OPENAI_API_KEY configurada: %s", bool(settings.openai_api_key))
+    logger.info("LLM_MODE activo: %s", settings.llm_mode)
 
     app = FastAPI(
         title="InsightCopilot AI",
