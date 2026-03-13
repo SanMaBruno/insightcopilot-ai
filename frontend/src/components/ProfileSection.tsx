@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getProfile } from "../api/datasets";
 import type { DatasetProfile } from "../types/api";
+import { Spinner, ErrorBox } from "./ui";
 
 export default function ProfileSection({ datasetId }: { datasetId: string }) {
   const [profile, setProfile] = useState<DatasetProfile | null>(null);
@@ -15,8 +16,8 @@ export default function ProfileSection({ datasetId }: { datasetId: string }) {
       .finally(() => setLoading(false));
   }, [datasetId]);
 
-  if (loading) return <p className="text-sm text-gray-500">Cargando perfil…</p>;
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
+  if (loading) return <Spinner text="Analizando estructura del dataset…" />;
+  if (error) return <ErrorBox message={error} onRetry={() => { setError(null); setLoading(true); getProfile(datasetId).then(setProfile).catch((e) => setError(e instanceof Error ? e.message : "Error")).finally(() => setLoading(false)); }} />;
   if (!profile) return null;
 
   return (

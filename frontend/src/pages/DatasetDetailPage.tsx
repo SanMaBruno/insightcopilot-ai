@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getDataset } from "../api/datasets";
 import type { Dataset } from "../types/api";
+import { Spinner, ErrorBox } from "../components/ui";
 import ProfileSection from "../components/ProfileSection";
 import InsightsSection from "../components/InsightsSection";
 import VisualizationsSection from "../components/VisualizationsSection";
@@ -15,10 +16,10 @@ type Tab = (typeof TABS)[number];
 const TAB_LABELS: Record<Tab, string> = {
   profile: "Profile",
   insights: "Insights",
-  visualizations: "Visualizations",
-  query: "Analytical Query",
-  "executive-summary": "Executive Summary",
-  rag: "RAG Query",
+  visualizations: "Charts",
+  query: "Query",
+  "executive-summary": "Summary (LLM)",
+  rag: "RAG (LLM)",
 };
 
 export default function DatasetDetailPage() {
@@ -35,22 +36,18 @@ export default function DatasetDetailPage() {
   }, [id]);
 
   if (error) {
-    return (
-      <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-        {error}
-      </div>
-    );
+    return <ErrorBox message={error} onRetry={() => window.location.reload()} />;
   }
 
   if (!dataset) {
-    return <p className="text-gray-500 text-sm">Cargando…</p>;
+    return <Spinner text="Cargando dataset…" />;
   }
 
   return (
     <div>
       {/* Breadcrumb + title */}
       <div className="mb-6">
-        <Link to="/" className="text-sm text-blue-600 hover:underline">
+        <Link to="/datasets" className="text-sm text-blue-600 hover:underline">
           ← Datasets
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 mt-2">{dataset.name}</h1>

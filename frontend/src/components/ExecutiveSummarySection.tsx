@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { postExecutiveSummary } from "../api/datasets";
 import type { ExecutiveSummary } from "../types/api";
+import { ErrorBox, InfoBanner } from "./ui";
 
 export default function ExecutiveSummarySection({ datasetId }: { datasetId: string }) {
   const [summary, setSummary] = useState<ExecutiveSummary | null>(null);
@@ -28,6 +29,10 @@ export default function ExecutiveSummarySection({ datasetId }: { datasetId: stri
 
   return (
     <div>
+      <InfoBanner>
+        Requiere OPENAI_API_KEY configurada en el backend. Genera un resumen ejecutivo con GPT.
+      </InfoBanner>
+
       <div className="flex gap-3 items-end mb-6">
         <div>
           <label className="block text-xs text-gray-500 mb-1">Audiencia</label>
@@ -56,7 +61,7 @@ export default function ExecutiveSummarySection({ datasetId }: { datasetId: stri
         </button>
       </div>
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {error && <ErrorBox message={error} />}
 
       {summary && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">

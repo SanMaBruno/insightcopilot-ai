@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getInsights } from "../api/datasets";
 import type { DatasetInsightReport } from "../types/api";
+import { Spinner, ErrorBox, EmptyState } from "./ui";
 
 const CATEGORY_COLORS: Record<string, string> = {
   info: "bg-blue-50 text-blue-700 border-blue-200",
@@ -21,9 +22,10 @@ export default function InsightsSection({ datasetId }: { datasetId: string }) {
       .finally(() => setLoading(false));
   }, [datasetId]);
 
-  if (loading) return <p className="text-sm text-gray-500">Generando insights…</p>;
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
+  if (loading) return <Spinner text="Generando insights…" />;
+  if (error) return <ErrorBox message={error} onRetry={() => { setError(null); setLoading(true); getInsights(datasetId).then(setReport).catch((e) => setError(e instanceof Error ? e.message : "Error")).finally(() => setLoading(false)); }} />;
   if (!report) return null;
+  if (report.insights.length === 0 && report.warnings.length === 0) return <EmptyState icon="💡" title="Sin insights detectados" description="El dataset no presenta patrones destacables" />;
 
   return (
     <div>

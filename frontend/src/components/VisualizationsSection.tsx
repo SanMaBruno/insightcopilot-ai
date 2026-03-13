@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getVisualizations } from "../api/datasets";
 import type { DatasetVisualization } from "../types/api";
+import { Spinner, ErrorBox, EmptyState } from "./ui";
 
 export default function VisualizationsSection({ datasetId }: { datasetId: string }) {
   const [viz, setViz] = useState<DatasetVisualization | null>(null);
@@ -15,9 +16,9 @@ export default function VisualizationsSection({ datasetId }: { datasetId: string
       .finally(() => setLoading(false));
   }, [datasetId]);
 
-  if (loading) return <p className="text-sm text-gray-500">Generando visualizaciones…</p>;
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-  if (!viz || viz.charts.length === 0) return <p className="text-sm text-gray-500">Sin gráficos disponibles</p>;
+  if (loading) return <Spinner text="Generando visualizaciones…" />;
+  if (error) return <ErrorBox message={error} onRetry={() => { setError(null); setLoading(true); getVisualizations(datasetId).then(setViz).catch((e) => setError(e instanceof Error ? e.message : "Error")).finally(() => setLoading(false)); }} />;
+  if (!viz || viz.charts.length === 0) return <EmptyState icon="📊" title="Sin gráficos disponibles" description="No se pudieron generar visualizaciones para este dataset" />;
 
   return (
     <div className="grid gap-6 md:grid-cols-2">

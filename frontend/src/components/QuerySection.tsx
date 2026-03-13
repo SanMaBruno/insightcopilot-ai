@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { postQuery } from "../api/datasets";
 import type { AnalyticalAnswer } from "../types/api";
+import { ErrorBox, InfoBanner } from "./ui";
 
 export default function QuerySection({ datasetId }: { datasetId: string }) {
   const [question, setQuestion] = useState("");
@@ -26,6 +27,10 @@ export default function QuerySection({ datasetId }: { datasetId: string }) {
 
   return (
     <div>
+      <InfoBanner>
+        Consulta analítica local — no requiere API key. Prueba: "¿Cuántas filas tiene el dataset?", "resumen", "nulos".
+      </InfoBanner>
+
       <form onSubmit={handleSubmit} className="flex gap-3 mb-6">
         <input
           type="text"
@@ -44,7 +49,7 @@ export default function QuerySection({ datasetId }: { datasetId: string }) {
         </button>
       </form>
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {error && <ErrorBox message={error} />}
 
       {answer && (
         <div className="bg-white border border-gray-200 rounded-lg p-4">

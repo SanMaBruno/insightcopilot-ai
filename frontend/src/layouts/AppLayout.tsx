@@ -1,7 +1,8 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Datasets" },
+  { to: "/", label: "Home" },
+  { to: "/datasets", label: "Datasets" },
 ] as const;
 
 export default function AppLayout() {
@@ -20,7 +21,7 @@ export default function AppLayout() {
               key={to}
               to={to}
               className={`text-sm font-medium transition ${
-                pathname === to
+                (to === "/" ? pathname === "/" : pathname.startsWith(to))
                   ? "text-blue-600"
                   : "text-gray-500 hover:text-gray-900"
               }`}

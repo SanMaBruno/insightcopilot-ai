@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { postRagQuery } from "../api/datasets";
 import type { RagQueryResponse } from "../types/api";
+import { ErrorBox, InfoBanner } from "./ui";
 
 export default function RagQuerySection({ datasetId }: { datasetId: string }) {
   const [question, setQuestion] = useState("");
@@ -26,6 +27,10 @@ export default function RagQuerySection({ datasetId }: { datasetId: string }) {
 
   return (
     <div>
+      <InfoBanner>
+        Requiere OPENAI_API_KEY y documentos indexados. Combina datos del dataset con documentos para responder preguntas.
+      </InfoBanner>
+
       <form onSubmit={handleSubmit} className="flex gap-3 mb-6">
         <input
           type="text"
@@ -44,7 +49,7 @@ export default function RagQuerySection({ datasetId }: { datasetId: string }) {
         </button>
       </form>
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {error && <ErrorBox message={error} />}
 
       {result && (
         <div className="space-y-4">
