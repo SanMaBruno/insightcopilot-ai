@@ -232,8 +232,8 @@ insightcopilot-ai/
 - [x] RAG documental (indexación + consulta)
 - [x] Observabilidad (health, logging, error handlers, CORS)
 - [x] Docker y Docker Compose
-- [ ] CI/CD (GitHub Actions)
-- [ ] Frontend (React/Next.js)
+- [x] CI/CD (GitHub Actions)
+- [x] Frontend base (React + TypeScript + Vite)
 
 ---
 
