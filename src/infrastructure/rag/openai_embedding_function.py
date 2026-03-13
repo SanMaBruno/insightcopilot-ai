@@ -17,14 +17,14 @@ class OpenAiEmbeddingFunction:
     def __init__(
         self, api_key: str, model: str = "text-embedding-3-small"
     ) -> None:
-        if not api_key:
-            raise EmbeddingConfigurationError(
-                "OPENAI_API_KEY no está configurada para embeddings."
-            )
         self._api_key = api_key
         self._model = model
 
     def __call__(self, texts: list[str]) -> list[list[float]]:
+        if not self._api_key:
+            raise EmbeddingConfigurationError(
+                "OPENAI_API_KEY no está configurada para embeddings."
+            )
         try:
             import openai
         except ImportError as exc:

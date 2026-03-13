@@ -12,6 +12,13 @@ from src.presentation.api.routes.health import router as health_router
 def create_app() -> FastAPI:
     setup_logging()
 
+    import logging
+
+    from src.shared.config.settings import settings
+
+    logger = logging.getLogger(__name__)
+    logger.info("OPENAI_API_KEY configurada: %s", bool(settings.openai_api_key))
+
     app = FastAPI(
         title="InsightCopilot AI",
         version="1.0.0",

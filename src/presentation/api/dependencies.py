@@ -41,6 +41,11 @@ def _get_vector_store() -> InMemoryVectorStore:
     return _vector_store
 
 
+_llm_client = OpenAiLlmClient(
+    api_key=settings.openai_api_key, model=settings.openai_model
+)
+
+
 def get_dataset_repository() -> DatasetRepository:
     return _dataset_repository
 
@@ -58,9 +63,7 @@ def get_file_storage() -> FileStorage:
 
 
 def get_llm_client() -> LlmClient:
-    return OpenAiLlmClient(
-        api_key=settings.openai_api_key, model=settings.openai_model
-    )
+    return _llm_client
 
 
 def get_document_indexer() -> DocumentIndexer:

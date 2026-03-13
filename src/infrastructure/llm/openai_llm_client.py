@@ -15,15 +15,15 @@ class LlmGenerationError(DomainError):
 class OpenAiLlmClient(LlmClient):
 
     def __init__(self, api_key: str, model: str = "gpt-4o-mini") -> None:
-        if not api_key:
-            raise LlmConfigurationError(
-                "OPENAI_API_KEY no está configurada. "
-                "Agregala al archivo .env para usar resúmenes ejecutivos."
-            )
         self._api_key = api_key
         self._model = model
 
     def generate(self, system_prompt: str, user_prompt: str) -> str:
+        if not self._api_key:
+            raise LlmConfigurationError(
+                "OPENAI_API_KEY no está configurada. "
+                "Agregala al archivo .env para usar resúmenes ejecutivos."
+            )
         try:
             import openai
         except ImportError as exc:
