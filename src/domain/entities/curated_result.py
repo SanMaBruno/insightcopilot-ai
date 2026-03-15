@@ -27,5 +27,6 @@ class CuratedResult:
     curated_null_count: int
     executed_steps: list[ExecutedStep]
     execution_time_ms: int
+    execution_mode: str = "manual"
     id: str = field(default_factory=lambda: str(uuid4()))
     created_at: datetime = field(default_factory=_now_utc)

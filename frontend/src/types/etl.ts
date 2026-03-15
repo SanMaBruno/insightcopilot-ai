@@ -72,5 +72,6 @@ export interface CuratedResult {
   curated_null_count: number;
   executed_steps: ExecutedStep[];
   execution_time_ms: number;
+  execution_mode: string;
 }
 }

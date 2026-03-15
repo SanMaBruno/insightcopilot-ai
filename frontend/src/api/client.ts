@@ -64,6 +64,8 @@ export const api = {
     }),
   getCuratedResult: (id: string, etlRunId: string) =>
     request<import("@/types/etl").CuratedResult>(`/datasets/${id}/etl/result?etl_run_id=${encodeURIComponent(etlRunId)}`),
+  getLatestCuratedResult: (id: string) =>
+    request<import("@/types/etl").CuratedResult>(`/datasets/${id}/etl/latest`),
   getCuratedDownloadUrl: (id: string, etlRunId: string) =>
     `${API_BASE}/datasets/${id}/etl/download?etl_run_id=${encodeURIComponent(etlRunId)}`,
 };

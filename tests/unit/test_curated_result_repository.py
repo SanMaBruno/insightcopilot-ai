@@ -81,3 +81,32 @@ def test_different_runs_stored_separately():
     assert repo.get_by_run("ds-1", "run-1") is not None
     assert repo.get_by_run("ds-1", "run-2") is not None
     assert repo.get_by_run("ds-1", "run-1").id != repo.get_by_run("ds-1", "run-2").id
+
+
+def test_get_latest_by_dataset_returns_most_recent():
+    repo = InMemoryCuratedResultRepository()
+    r1 = _make_result(etl_run_id="run-1")
+    repo.save(r1)
+    r2 = _make_result(etl_run_id="run-2")
+    repo.save(r2)
+
+    latest = repo.get_latest_by_dataset("ds-1")
+    assert latest is not None
+    assert latest.etl_run_id == "run-2"
+
+
+def test_get_latest_by_dataset_none_when_empty():
+    repo = InMemoryCuratedResultRepository()
+    assert repo.get_latest_by_dataset("ds-1") is None
+
+
+def test_get_latest_by_dataset_filters_by_dataset_id():
+    repo = InMemoryCuratedResultRepository()
+    r1 = _make_result(dataset_id="ds-1", etl_run_id="run-1")
+    r2 = _make_result(dataset_id="ds-2", etl_run_id="run-2")
+    repo.save(r1)
+    repo.save(r2)
+
+    latest = repo.get_latest_by_dataset("ds-1")
+    assert latest is not None
+    assert latest.dataset_id == "ds-1"

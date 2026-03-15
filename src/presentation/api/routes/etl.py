@@ -160,6 +160,7 @@ def _build_curated_response(result) -> CuratedResultResponse:
             for s in result.executed_steps
         ],
         execution_time_ms=result.execution_time_ms,
+        execution_mode=result.execution_mode,
     )
 
 
@@ -234,3 +235,19 @@ def download_curated_csv(
         filename=friendly_name,
         headers={"Content-Disposition": f'attachment; filename="{friendly_name}"'},
     )
+
+
+# ---- Phase 3: Latest curated result ----
+
+
+@router.get(
+    "/{dataset_id}/etl/latest", response_model=CuratedResultResponse,
+)
+def get_latest_curated_result(
+    dataset_id: str,
+    curated_repo: CuratedResultRepository = Depends(get_curated_result_repository),  # noqa: B008
+) -> CuratedResultResponse:
+    result = curated_repo.get_latest_by_dataset(dataset_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No existe resultado curado para este dataset")
+    return _build_curated_response(result)

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import { Workflow, ShieldCheck, ClipboardList, ChevronRight, Play, Download, CheckCircle2, SkipForward } from "lucide-react";
+import { Workflow, ShieldCheck, ClipboardList, ChevronRight, Play, Download, CheckCircle2, SkipForward, Zap } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StaggerContainer, StaggerItem } from "@/components/ui/animated-section";
@@ -52,6 +52,19 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
   const [curatedResult, setCuratedResult] = useState<CuratedResult | null>(null);
   const [strategy, setStrategy] = useState<string>("conservative");
 
+  // Phase 3: detect existing curated result on mount
+  const latestQuery = useQuery({
+    queryKey: ["etl-latest", datasetId],
+    queryFn: () => api.getLatestCuratedResult(datasetId),
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (latestQuery.data) {
+      setCuratedResult(latestQuery.data);
+    }
+  }, [latestQuery.data]);
+
   const qualityQuery = useQuery({
     queryKey: ["quality", datasetId],
     queryFn: () => api.assessQuality(datasetId),
@@ -79,8 +92,11 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
     }
   };
 
-  // Step 0: initial state
-  if (!assessment) {
+  // Step 0: initial state — check for auto-curated first
+  if (!assessment && !curatedResult) {
+    if (latestQuery.isLoading) {
+      return <LoadingState message="Verificando ETL previo…" />;
+    }
     return (
       <div className="space-y-4">
         <EmptyState
@@ -107,8 +123,9 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Step 1: Quality Assessment */}
       <StaggerContainer className="space-y-4">
+      {/* Step 1: Quality Assessment (only if manual flow started) */}
+      {assessment && (
         <StaggerItem>
           <div className="rounded-lg border border-border/30 bg-muted/20 p-4 space-y-4">
             <div className="flex items-center justify-between">
@@ -164,8 +181,10 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
             </div>
           </div>
         </StaggerItem>
+      )}
 
-        {/* Step 2: Plan generation */}
+        {/* Step 2: Plan generation (only if manual flow started) */}
+        {assessment && (
         <StaggerItem>
           <div className="rounded-lg border border-border/30 bg-muted/20 p-4 space-y-4">
             <div className="flex items-center gap-2">
@@ -274,6 +293,7 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
             )}
           </div>
         </StaggerItem>
+        )}
 
         {/* Step 3: Execution result */}
         {curatedResult && (
@@ -283,6 +303,12 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   <h3 className="text-sm font-semibold text-foreground">Resultado de Ejecución</h3>
+                  {curatedResult.execution_mode === "auto_safe" && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-medium uppercase tracking-wider">
+                      <Zap className="h-3 w-3" />
+                      ETL Automático
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-medium uppercase tracking-wider">
@@ -358,15 +384,27 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
               </div>
 
               {/* Download */}
-              <div className="flex justify-end">
-                <a
-                  href={api.getCuratedDownloadUrl(datasetId, curatedResult.etl_run_id)}
-                  download
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                  <Download className="h-4 w-4" />
-                  Descargar CSV Curado
-                </a>
+              <div className="flex justify-between items-center">
+                {curatedResult.execution_mode === "auto_safe" && !assessment && (
+                  <button
+                    onClick={handleAssess}
+                    disabled={qualityQuery.isFetching}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border/30 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors disabled:opacity-50"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    {qualityQuery.isFetching ? "Evaluando…" : "Iniciar flujo manual"}
+                  </button>
+                )}
+                <div className="ml-auto">
+                  <a
+                    href={api.getCuratedDownloadUrl(datasetId, curatedResult.etl_run_id)}
+                    download
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    <Download className="h-4 w-4" />
+                    Descargar CSV Curado
+                  </a>
+                </div>
               </div>
             </div>
           </StaggerItem>

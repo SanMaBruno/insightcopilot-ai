@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-small"
+    etl_mode: Literal["manual", "auto_safe"] = "manual"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

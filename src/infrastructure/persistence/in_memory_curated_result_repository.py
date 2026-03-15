@@ -19,3 +19,13 @@ class InMemoryCuratedResultRepository(CuratedResultRepository):
         self, dataset_id: str, etl_run_id: str,
     ) -> Optional[CuratedResult]:
         return self._store.get((dataset_id, etl_run_id))
+
+    def get_latest_by_dataset(
+        self, dataset_id: str,
+    ) -> Optional[CuratedResult]:
+        matches = [
+            r for r in self._store.values() if r.dataset_id == dataset_id
+        ]
+        if not matches:
+            return None
+        return max(matches, key=lambda r: r.created_at)

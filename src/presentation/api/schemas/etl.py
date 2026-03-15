@@ -94,3 +94,4 @@ class CuratedResultResponse(BaseModel):
     curated_null_count: int
     executed_steps: list[ExecutedStepResponse]
     execution_time_ms: int
+    execution_mode: str = "manual"

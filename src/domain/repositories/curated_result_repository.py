@@ -15,3 +15,8 @@ class CuratedResultRepository(ABC):
     def get_by_run(
         self, dataset_id: str, etl_run_id: str,
     ) -> Optional[CuratedResult]: ...
+
+    @abstractmethod
+    def get_latest_by_dataset(
+        self, dataset_id: str,
+    ) -> Optional[CuratedResult]: ...

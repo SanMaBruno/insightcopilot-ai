@@ -1,8 +1,13 @@
+from __future__ import annotations
+
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
 from src.application.use_cases.answer_analytical_query_use_case import (
     AnswerAnalyticalQueryUseCase,
 )
+from src.application.use_cases.auto_etl_use_case import AutoEtlUseCase
 from src.application.use_cases.create_dataset_use_case import CreateDatasetUseCase
 from src.application.use_cases.generate_dataset_insights_use_case import (
     GenerateDatasetInsightsUseCase,
@@ -26,19 +31,25 @@ from src.application.use_cases.rag_query_use_case import RagQueryUseCase
 from src.application.use_cases.upload_dataset_use_case import UploadDatasetUseCase
 from src.domain.llm_client import LlmClient
 from src.domain.repositories.chart_generator import ChartGenerator
+from src.domain.repositories.curated_result_repository import CuratedResultRepository
 from src.domain.repositories.dataset_loader import DatasetLoader
 from src.domain.repositories.dataset_repository import DatasetRepository
 from src.domain.repositories.document_retriever import DocumentRetriever
 from src.domain.repositories.file_storage import FileStorage
+from src.domain.repositories.transformation_engine import TransformationEngine
 from src.infrastructure.files.csv_dataset_loader import FileLoadError
 from src.infrastructure.files.matplotlib_chart_generator import ChartGenerationError
+from src.shared.config.settings import settings
 from src.presentation.api.dependencies import (
     get_chart_generator,
+    get_curated_file_storage,
+    get_curated_result_repository,
     get_dataset_loader,
     get_dataset_repository,
     get_document_retriever,
     get_file_storage,
     get_llm_client,
+    get_transformation_engine,
 )
 from src.presentation.api.schemas.analytical_query import (
     AnalyticalAnswerResponse,
@@ -71,14 +82,19 @@ from src.presentation.api.schemas.rag_query import (
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
+logger = logging.getLogger(__name__)
 
-def _to_response(dataset) -> DatasetResponse:
+
+def _to_response(
+    dataset, auto_etl_run_id: str | None = None,
+) -> DatasetResponse:
     return DatasetResponse(
         id=dataset.id,
         name=dataset.name,
         file_path=dataset.file_path,
         source_type=dataset.source_type,
         created_at=dataset.created_at,
+        auto_etl_run_id=auto_etl_run_id,
     )
 
 
@@ -122,6 +138,10 @@ async def upload_dataset(
     file: UploadFile,
     repo: DatasetRepository = Depends(get_dataset_repository),  # noqa: B008
     storage: FileStorage = Depends(get_file_storage),  # noqa: B008
+    loader: DatasetLoader = Depends(get_dataset_loader),  # noqa: B008
+    engine: TransformationEngine = Depends(get_transformation_engine),  # noqa: B008
+    curated_storage: FileStorage = Depends(get_curated_file_storage),  # noqa: B008
+    curated_repo: CuratedResultRepository = Depends(get_curated_result_repository),  # noqa: B008
 ) -> DatasetResponse:
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Solo se permiten archivos CSV.")
@@ -132,7 +152,29 @@ async def upload_dataset(
     dataset = UploadDatasetUseCase(repository=repo, file_storage=storage).execute(
         name=name, filename=file.filename, content=content,
     )
-    return _to_response(dataset)
+
+    auto_etl_run_id: str | None = None
+    if settings.etl_mode == "auto_safe":
+        try:
+            result = AutoEtlUseCase(
+                loader=loader,
+                engine=engine,
+                file_storage=curated_storage,
+                curated_repo=curated_repo,
+            ).execute(
+                dataset_id=dataset.id,
+                file_path=dataset.file_path,
+                dataset_name=dataset.name,
+            )
+            auto_etl_run_id = result.etl_run_id
+        except Exception:
+            logger.exception(
+                "Auto ETL falló para dataset_id=%s name=%s — el upload continúa sin curado automático",
+                dataset.id,
+                dataset.name,
+            )
+
+    return _to_response(dataset, auto_etl_run_id=auto_etl_run_id)
 
 @router.get("", response_model=list[DatasetResponse])
 def list_datasets(
