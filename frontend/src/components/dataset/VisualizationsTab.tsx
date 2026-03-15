@@ -4,6 +4,7 @@ import { BarChart3 } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StaggerContainer, StaggerItem } from "@/components/ui/animated-section";
+import InteractiveChart from "./InteractiveChart";
 
 export default function VisualizationsTab({ datasetId }: { datasetId: string }) {
   const { data, isLoading, error } = useQuery({
@@ -28,7 +29,9 @@ export default function VisualizationsTab({ datasetId }: { datasetId: string }) 
               <span className="text-[10px] font-mono text-muted-foreground mt-0.5 inline-block">{chart.chart_type}</span>
             </div>
             <div className="p-3">
-              {chart.image_base64 ? (
+              {chart.interactive_spec ? (
+                <InteractiveChart title={chart.title} spec={chart.interactive_spec} />
+              ) : chart.image_base64 ? (
                 <img src={`data:image/png;base64,${chart.image_base64}`} alt={chart.title} className="w-full rounded-md" />
               ) : (
                 <div className="h-44 rounded-md bg-muted/30 flex items-center justify-center dot-pattern">

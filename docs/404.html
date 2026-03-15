@@ -1,20 +1,20 @@
-<!doctype html>
-<html lang="es">
+<!DOCTYPE html>
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
     <title>InsightCopilot AI</title>
-    <meta name="description" content="Plataforma de Inteligencia de Datos impulsada por IA" />
-    <meta name="author" content="Bruno San Martin" />
-
-    <meta property="og:title" content="InsightCopilot AI" />
-    <meta property="og:description" content="Plataforma de Inteligencia de Datos impulsada por IA" />
-    <meta property="og:type" content="website" />
-    <script type="module" crossorigin src="/insightcopilot-ai/assets/index-D4cjoURd.js"></script>
-    <link rel="stylesheet" crossorigin href="/insightcopilot-ai/assets/index-DJq1BhSb.css">
+    <script>
+      // SPA redirect for GitHub Pages
+      var pathSegmentsToKeep = 1;
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
   </head>
-
-  <body>
-    <div id="root"></div>
-  </body>
+  <body></body>
 </html>
