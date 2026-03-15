@@ -46,4 +46,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ question: query }),
     }),
+
+  // ETL endpoints
+  assessQuality: (id: string) =>
+    request<import("@/types/etl").QualityAssessment>(`/datasets/${id}/quality`),
+  generateTransformPlan: (id: string, etlRunId: string, qualityAssessmentId: string, strategy: string = "conservative") =>
+    request<import("@/types/etl").TransformationPlan>(`/datasets/${id}/etl/plan`, {
+      method: "POST",
+      body: JSON.stringify({ etl_run_id: etlRunId, quality_assessment_id: qualityAssessmentId, strategy }),
+    }),
 };

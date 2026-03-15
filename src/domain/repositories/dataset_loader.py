@@ -11,6 +11,7 @@ class RawDatasetData:
     dtypes: dict[str, str]
     null_counts: dict[str, int]
     unique_counts: dict[str, int]
+    duplicate_row_count: int = 0
 
 
 class DatasetLoader(ABC):

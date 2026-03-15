@@ -6,6 +6,7 @@ from src.presentation.api.error_handlers import register_error_handlers
 from src.presentation.api.middleware import RequestLoggingMiddleware
 from src.presentation.api.routes.datasets import router as datasets_router
 from src.presentation.api.routes.documents import router as documents_router
+from src.presentation.api.routes.etl import router as etl_router
 from src.presentation.api.routes.health import router as health_router
 
 
@@ -39,6 +40,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(datasets_router)
     app.include_router(documents_router)
+    app.include_router(etl_router)
     return app
 
 

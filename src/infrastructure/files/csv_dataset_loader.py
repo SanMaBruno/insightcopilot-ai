@@ -28,4 +28,5 @@ class CsvDatasetLoader(DatasetLoader):
             dtypes={col: str(dtype) for col, dtype in df.dtypes.items()},
             null_counts={col: int(count) for col, count in df.isnull().sum().items()},
             unique_counts={col: int(count) for col, count in df.nunique().items()},
+            duplicate_row_count=int(df.duplicated().sum()),
         )

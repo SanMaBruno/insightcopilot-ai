@@ -4,7 +4,7 @@ import { api } from "@/api/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Table2, Lightbulb, BarChart3, Search,
-  FileText, BrainCircuit,
+  FileText, BrainCircuit, Workflow,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -15,6 +15,7 @@ import VisualizationsTab from "@/components/dataset/VisualizationsTab";
 import AnalyticalQueryTab from "@/components/dataset/AnalyticalQueryTab";
 import ExecutiveSummaryTab from "@/components/dataset/ExecutiveSummaryTab";
 import RagQueryTab from "@/components/dataset/RagQueryTab";
+import EtlTab from "@/components/dataset/EtlTab";
 
 const tabs = [
   { value: "profile", label: "Perfil", icon: Table2 },
@@ -23,6 +24,7 @@ const tabs = [
   { value: "analytical", label: "Consulta", icon: Search },
   { value: "summary", label: "Resumen", icon: FileText },
   { value: "rag", label: "RAG", icon: BrainCircuit },
+  { value: "etl", label: "ETL", icon: Workflow },
 ];
 
 export default function DatasetDetail() {
@@ -105,6 +107,7 @@ export default function DatasetDetail() {
                     {tab.value === "analytical" && <AnalyticalQueryTab datasetId={id!} />}
                     {tab.value === "summary" && <ExecutiveSummaryTab datasetId={id!} />}
                     {tab.value === "rag" && <RagQueryTab datasetId={id!} />}
+                    {tab.value === "etl" && <EtlTab datasetId={id!} />}
                   </div>
                 </motion.div>
               </AnimatePresence>
