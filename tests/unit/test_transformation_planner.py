@@ -118,7 +118,10 @@ class TestTransformationPlanner:
         cols = [_make_col("a", ColumnRole.VALUABLE_NUMERIC, "int64")]
 
         steps = generate_plan_steps(cols, 10, "conservative")
-        dup_steps = [s for s in steps if s.column_name is None]
+        dup_steps = [
+            s for s in steps
+            if s.column_name is None and s.action != TransformAction.NORMALIZE_NAMES
+        ]
 
         assert len(dup_steps) == 1
         assert dup_steps[0].action == TransformAction.KEEP

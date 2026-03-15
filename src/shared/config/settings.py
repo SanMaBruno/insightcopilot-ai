@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
     upload_dir: str = os.path.join(_PROJECT_ROOT, "data", "uploads")
+    curated_dir: str = os.path.join(_PROJECT_ROOT, "data", "curated")
     database_url: str = os.path.join(_PROJECT_ROOT, "data", "insightcopilot.db")
     llm_mode: Literal["openai", "mock"] = "openai"
     openai_api_key: str = ""

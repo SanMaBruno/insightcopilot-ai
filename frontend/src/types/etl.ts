@@ -44,3 +44,33 @@ export interface TransformationPlan {
   status: string;
   steps: TransformationStep[];
 }
+
+export interface ExecutedStep {
+  action: string;
+  column_name: string | null;
+  success: boolean;
+  rows_before: number;
+  rows_after: number;
+  columns_before: number;
+  columns_after: number;
+  detail: string;
+}
+
+export interface CuratedResult {
+  id: string;
+  dataset_id: string;
+  etl_run_id: string;
+  plan_id: string;
+  strategy: string;
+  status: string;
+  curated_file_path: string;
+  original_row_count: number;
+  curated_row_count: number;
+  original_column_count: number;
+  curated_column_count: number;
+  original_null_count: number;
+  curated_null_count: number;
+  executed_steps: ExecutedStep[];
+  execution_time_ms: number;
+}
+}

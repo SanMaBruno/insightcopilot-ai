@@ -6,6 +6,7 @@ from typing import Optional
 
 
 class TransformAction(str, Enum):
+    NORMALIZE_NAMES = "normalize_names"
     DROP_COLUMN = "drop_column"
     FILL_NULLS_MEDIAN = "fill_nulls_median"
     FILL_NULLS_MODE = "fill_nulls_mode"

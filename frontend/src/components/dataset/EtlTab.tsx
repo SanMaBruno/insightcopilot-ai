@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import { Workflow, ShieldCheck, ClipboardList, ChevronRight } from "lucide-react";
+import { Workflow, ShieldCheck, ClipboardList, ChevronRight, Play, Download, CheckCircle2, SkipForward } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StaggerContainer, StaggerItem } from "@/components/ui/animated-section";
-import type { QualityAssessment, TransformationPlan } from "@/types/etl";
+import type { QualityAssessment, TransformationPlan, CuratedResult } from "@/types/etl";
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
   valuable_numeric: { label: "Numérica valiosa", color: "text-emerald-400", icon: "🟢" },
@@ -20,6 +20,7 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; icon: string }
 };
 
 const ACTION_LABELS: Record<string, string> = {
+  normalize_names: "Normalizar nombres",
   drop_column: "Eliminar columna",
   fill_nulls_median: "Rellenar con mediana",
   fill_nulls_mode: "Rellenar con moda",
@@ -48,6 +49,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
 export default function EtlTab({ datasetId }: { datasetId: string }) {
   const [assessment, setAssessment] = useState<QualityAssessment | null>(null);
   const [plan, setPlan] = useState<TransformationPlan | null>(null);
+  const [curatedResult, setCuratedResult] = useState<CuratedResult | null>(null);
   const [strategy, setStrategy] = useState<string>("conservative");
 
   const qualityQuery = useQuery({
@@ -59,7 +61,13 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
   const planMutation = useMutation({
     mutationFn: () =>
       api.generateTransformPlan(datasetId, assessment!.etl_run_id, assessment!.id, strategy),
-    onSuccess: (data) => setPlan(data),
+    onSuccess: (data) => { setPlan(data); setCuratedResult(null); },
+  });
+
+  const executeMutation = useMutation({
+    mutationFn: () =>
+      api.executeEtl(datasetId, assessment!.etl_run_id, assessment!.id, strategy),
+    onSuccess: (data) => setCuratedResult(data),
   });
 
   const handleAssess = async () => {
@@ -67,6 +75,7 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
     if (result.data) {
       setAssessment(result.data);
       setPlan(null);
+      setCuratedResult(null);
     }
   };
 
@@ -239,16 +248,147 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
                 </div>
 
                 <button
-                  onClick={() => { setPlan(null); }}
+                  onClick={() => { setPlan(null); setCuratedResult(null); }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   ← Cambiar estrategia
                 </button>
+
+                {/* Execute button */}
+                {!curatedResult && (
+                  <div className="pt-2 border-t border-border/20">
+                    <button
+                      onClick={() => executeMutation.mutate()}
+                      disabled={executeMutation.isPending}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                    >
+                      <Play className="h-4 w-4" />
+                      {executeMutation.isPending ? "Ejecutando…" : "Aplicar Plan"}
+                    </button>
+                    {executeMutation.isError && (
+                      <p className="text-sm text-destructive mt-2">Error al ejecutar el plan ETL.</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
         </StaggerItem>
+
+        {/* Step 3: Execution result */}
+        {curatedResult && (
+          <StaggerItem>
+            <div className="rounded-lg border border-border/30 bg-muted/20 p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <h3 className="text-sm font-semibold text-foreground">Resultado de Ejecución</h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-medium uppercase tracking-wider">
+                    {curatedResult.strategy === "conservative" ? "Conservadora" : "Agresiva"}
+                  </span>
+                  <span className="text-[10px] font-mono text-muted-foreground">
+                    {curatedResult.execution_time_ms}ms
+                  </span>
+                </div>
+              </div>
+
+              {/* Before / After comparison */}
+              <div className="grid grid-cols-3 gap-4">
+                <ComparisonCard label="Filas" before={curatedResult.original_row_count} after={curatedResult.curated_row_count} />
+                <ComparisonCard label="Columnas" before={curatedResult.original_column_count} after={curatedResult.curated_column_count} />
+                <ComparisonCard label="Nulos" before={curatedResult.original_null_count} after={curatedResult.curated_null_count} />
+              </div>
+
+              {/* Step summary */}
+              {(() => {
+                const successSteps = curatedResult.executed_steps.filter((s) => s.success);
+                const skippedSteps = curatedResult.executed_steps.filter((s) => !s.success);
+                return (
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                      {successSteps.length} ejecutado(s)
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <SkipForward className="h-3 w-3 text-yellow-500" />
+                      {skippedSteps.length} omitido(s)
+                    </span>
+                  </div>
+                );
+              })()}
+
+              {/* Executed steps table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border/30">
+                      <th className="text-left py-2 px-2 text-muted-foreground font-medium">Estado</th>
+                      <th className="text-left py-2 px-2 text-muted-foreground font-medium">Columna</th>
+                      <th className="text-left py-2 px-2 text-muted-foreground font-medium">Acción</th>
+                      <th className="text-left py-2 px-2 text-muted-foreground font-medium">Detalle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {curatedResult.executed_steps.map((step, idx) => (
+                      <tr key={idx} className="border-b border-border/10 hover:bg-muted/30 transition-colors">
+                        <td className="py-1.5 px-2">
+                          {step.success ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                          ) : (
+                            <SkipForward className="h-3.5 w-3.5 text-yellow-500" />
+                          )}
+                        </td>
+                        <td className="py-1.5 px-2 font-mono text-foreground">
+                          {step.column_name ?? <span className="text-muted-foreground italic">global</span>}
+                        </td>
+                        <td className="py-1.5 px-2">
+                          <span className={step.success ? "text-blue-400 font-medium" : "text-muted-foreground"}>
+                            {ACTION_LABELS[step.action] ?? step.action}
+                          </span>
+                        </td>
+                        <td className="py-1.5 px-2 text-muted-foreground max-w-[280px] truncate" title={step.detail}>
+                          {step.detail}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Download */}
+              <div className="flex justify-end">
+                <a
+                  href={api.getCuratedDownloadUrl(datasetId, curatedResult.etl_run_id)}
+                  download
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                  Descargar CSV Curado
+                </a>
+              </div>
+            </div>
+          </StaggerItem>
+        )}
       </StaggerContainer>
+    </div>
+  );
+}
+
+function ComparisonCard({ label, before, after }: { label: string; before: number; after: number }) {
+  const diff = after - before;
+  const diffLabel = diff === 0 ? "sin cambio" : diff > 0 ? `+${diff}` : `${diff}`;
+  const diffColor = diff === 0 ? "text-muted-foreground" : diff < 0 ? "text-emerald-400" : "text-yellow-400";
+  return (
+    <div className="rounded-md border border-border/20 bg-background/50 p-3 text-center space-y-1">
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+      <div className="flex items-center justify-center gap-2">
+        <span className="text-sm font-mono text-muted-foreground">{before.toLocaleString()}</span>
+        <span className="text-muted-foreground">→</span>
+        <span className="text-sm font-mono text-foreground font-semibold">{after.toLocaleString()}</span>
+      </div>
+      <p className={`text-[10px] font-mono ${diffColor}`}>{diffLabel}</p>
     </div>
   );
 }

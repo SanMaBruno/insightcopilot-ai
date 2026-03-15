@@ -55,4 +55,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ etl_run_id: etlRunId, quality_assessment_id: qualityAssessmentId, strategy }),
     }),
+
+  // ETL Phase 2
+  executeEtl: (id: string, etlRunId: string, qualityAssessmentId: string, strategy: string = "conservative") =>
+    request<import("@/types/etl").CuratedResult>(`/datasets/${id}/etl/execute`, {
+      method: "POST",
+      body: JSON.stringify({ etl_run_id: etlRunId, quality_assessment_id: qualityAssessmentId, strategy }),
+    }),
+  getCuratedResult: (id: string, etlRunId: string) =>
+    request<import("@/types/etl").CuratedResult>(`/datasets/${id}/etl/result?etl_run_id=${encodeURIComponent(etlRunId)}`),
+  getCuratedDownloadUrl: (id: string, etlRunId: string) =>
+    `${API_BASE}/datasets/${id}/etl/download?etl_run_id=${encodeURIComponent(etlRunId)}`,
 };

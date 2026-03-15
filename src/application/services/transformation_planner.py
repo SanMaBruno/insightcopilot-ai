@@ -40,6 +40,17 @@ def generate_plan_steps(
     steps: list[TransformationStep] = []
     priority = 0
 
+    # Step 0: normalize column names
+    steps.append(
+        TransformationStep(
+            column_name=None,
+            action=TransformAction.NORMALIZE_NAMES,
+            params={},
+            reason="Normalizar nombres de columnas (minúsculas, sin espacios extra)",
+            priority=(priority := priority + 1),
+        )
+    )
+
     for col in classifications:
         action = action_map[col.role]
 
