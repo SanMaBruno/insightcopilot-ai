@@ -74,4 +74,19 @@ export interface CuratedResult {
   execution_time_ms: number;
   execution_mode: string;
 }
+
+export interface EtlNarrativeSections {
+  resumen: string;
+  calidad_original: string;
+  transformaciones: string;
+  resultado: string;
+  recomendaciones: string;
+}
+
+export interface EtlNarrative {
+  id: string;
+  dataset_id: string;
+  etl_run_id: string;
+  sections: EtlNarrativeSections;
+  execution_mode: string;
 }

@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import { Workflow, ShieldCheck, ClipboardList, ChevronRight, Play, Download, CheckCircle2, SkipForward, Zap } from "lucide-react";
+import { Workflow, ShieldCheck, ClipboardList, ChevronRight, Play, Download, CheckCircle2, SkipForward, Zap, FileText, Sparkles } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StaggerContainer, StaggerItem } from "@/components/ui/animated-section";
-import type { QualityAssessment, TransformationPlan, CuratedResult } from "@/types/etl";
+import type { QualityAssessment, TransformationPlan, CuratedResult, EtlNarrative } from "@/types/etl";
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
   valuable_numeric: { label: "Numérica valiosa", color: "text-emerald-400", icon: "🟢" },
@@ -50,6 +50,7 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
   const [assessment, setAssessment] = useState<QualityAssessment | null>(null);
   const [plan, setPlan] = useState<TransformationPlan | null>(null);
   const [curatedResult, setCuratedResult] = useState<CuratedResult | null>(null);
+  const [narrative, setNarrative] = useState<EtlNarrative | null>(null);
   const [strategy, setStrategy] = useState<string>("conservative");
 
   // Phase 3: detect existing curated result on mount
@@ -74,7 +75,7 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
   const planMutation = useMutation({
     mutationFn: () =>
       api.generateTransformPlan(datasetId, assessment!.etl_run_id, assessment!.id, strategy),
-    onSuccess: (data) => { setPlan(data); setCuratedResult(null); },
+    onSuccess: (data) => { setPlan(data); setCuratedResult(null); setNarrative(null); },
   });
 
   const executeMutation = useMutation({
@@ -83,12 +84,19 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
     onSuccess: (data) => setCuratedResult(data),
   });
 
+  const narrativeMutation = useMutation({
+    mutationFn: () =>
+      api.generateEtlNarrative(datasetId, curatedResult!.etl_run_id),
+    onSuccess: (data) => setNarrative(data),
+  });
+
   const handleAssess = async () => {
     const result = await qualityQuery.refetch();
     if (result.data) {
       setAssessment(result.data);
       setPlan(null);
       setCuratedResult(null);
+      setNarrative(null);
     }
   };
 
@@ -406,6 +414,41 @@ export default function EtlTab({ datasetId }: { datasetId: string }) {
                   </a>
                 </div>
               </div>
+
+              {/* Phase 4: Narrative */}
+              <div className="border-t border-border/20 pt-4 space-y-4">
+                {!narrative ? (
+                  <div>
+                    <button
+                      onClick={() => narrativeMutation.mutate()}
+                      disabled={narrativeMutation.isPending}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors disabled:opacity-50"
+                    >
+                      <FileText className="h-4 w-4" />
+                      {narrativeMutation.isPending ? "Generando narrativa…" : "Generar Reporte IA"}
+                    </button>
+                    {narrativeMutation.isError && (
+                      <p className="text-sm text-destructive mt-2">Error al generar la narrativa ETL.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-violet-500" />
+                      <h3 className="text-sm font-semibold text-foreground">Narrativa ETL</h3>
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 font-medium uppercase tracking-wider">
+                        <Sparkles className="h-3 w-3" />
+                        IA
+                      </span>
+                    </div>
+                    <NarrativeSection title="Resumen" content={narrative.sections.resumen} />
+                    <NarrativeSection title="Calidad Original" content={narrative.sections.calidad_original} />
+                    <NarrativeSection title="Transformaciones" content={narrative.sections.transformaciones} />
+                    <NarrativeSection title="Resultado" content={narrative.sections.resultado} />
+                    <NarrativeSection title="Recomendaciones" content={narrative.sections.recomendaciones} />
+                  </div>
+                )}
+              </div>
             </div>
           </StaggerItem>
         )}
@@ -427,6 +470,15 @@ function ComparisonCard({ label, before, after }: { label: string; before: numbe
         <span className="text-sm font-mono text-foreground font-semibold">{after.toLocaleString()}</span>
       </div>
       <p className={`text-[10px] font-mono ${diffColor}`}>{diffLabel}</p>
+    </div>
+  );
+}
+
+function NarrativeSection({ title, content }: { title: string; content: string }) {
+  return (
+    <div className="rounded-md border border-border/20 bg-background/50 p-3 space-y-1">
+      <h4 className="text-xs font-semibold text-violet-400 uppercase tracking-wider">{title}</h4>
+      <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{content}</p>
     </div>
   );
 }

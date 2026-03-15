@@ -12,7 +12,12 @@ from src.application.use_cases.get_curated_result_use_case import (
     CuratedResultNotFoundError,
     GetCuratedResultUseCase,
 )
+from src.application.use_cases.generate_etl_narrative_use_case import (
+    CuratedResultNotFoundError as NarrativeNotFoundError,
+    GenerateEtlNarrativeUseCase,
+)
 from src.application.use_cases.get_dataset_by_id_use_case import DatasetNotFoundError
+from src.domain.llm_client import LlmClient
 from src.domain.repositories.curated_result_repository import CuratedResultRepository
 from src.domain.repositories.dataset_loader import DatasetLoader
 from src.domain.repositories.dataset_repository import DatasetRepository
@@ -24,11 +29,15 @@ from src.presentation.api.dependencies import (
     get_curated_result_repository,
     get_dataset_loader,
     get_dataset_repository,
+    get_llm_client,
     get_transformation_engine,
 )
 from src.presentation.api.schemas.etl import (
     ColumnClassificationResponse,
     CuratedResultResponse,
+    EtlNarrativeRequest,
+    EtlNarrativeResponse,
+    EtlNarrativeSectionsResponse,
     ExecuteEtlRequest,
     ExecutedStepResponse,
     QualityAssessmentResponse,
@@ -251,3 +260,41 @@ def get_latest_curated_result(
     if result is None:
         raise HTTPException(status_code=404, detail="No existe resultado curado para este dataset")
     return _build_curated_response(result)
+
+
+# ---- Phase 4: ETL Narrative ----
+
+
+@router.post(
+    "/{dataset_id}/etl/narrative", response_model=EtlNarrativeResponse,
+)
+def generate_etl_narrative(
+    dataset_id: str,
+    body: EtlNarrativeRequest,
+    curated_repo: CuratedResultRepository = Depends(get_curated_result_repository),  # noqa: B008
+    llm_client: LlmClient = Depends(get_llm_client),  # noqa: B008
+) -> EtlNarrativeResponse:
+    try:
+        narrative = GenerateEtlNarrativeUseCase(
+            curated_repo=curated_repo,
+            llm_client=llm_client,
+        ).execute(
+            dataset_id=dataset_id,
+            etl_run_id=body.etl_run_id,
+        )
+    except NarrativeNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=exc.message) from exc
+
+    return EtlNarrativeResponse(
+        id=narrative.id,
+        dataset_id=narrative.dataset_id,
+        etl_run_id=narrative.etl_run_id,
+        sections=EtlNarrativeSectionsResponse(
+            resumen=narrative.sections.resumen,
+            calidad_original=narrative.sections.calidad_original,
+            transformaciones=narrative.sections.transformaciones,
+            resultado=narrative.sections.resultado,
+            recomendaciones=narrative.sections.recomendaciones,
+        ),
+        execution_mode=narrative.execution_mode,
+    )

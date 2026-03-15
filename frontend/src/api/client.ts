@@ -68,4 +68,11 @@ export const api = {
     request<import("@/types/etl").CuratedResult>(`/datasets/${id}/etl/latest`),
   getCuratedDownloadUrl: (id: string, etlRunId: string) =>
     `${API_BASE}/datasets/${id}/etl/download?etl_run_id=${encodeURIComponent(etlRunId)}`,
+
+  // ETL Phase 4
+  generateEtlNarrative: (id: string, etlRunId: string) =>
+    request<import("@/types/etl").EtlNarrative>(`/datasets/${id}/etl/narrative`, {
+      method: "POST",
+      body: JSON.stringify({ etl_run_id: etlRunId }),
+    }),
 };

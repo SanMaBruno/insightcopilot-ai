@@ -95,3 +95,26 @@ class CuratedResultResponse(BaseModel):
     executed_steps: list[ExecutedStepResponse]
     execution_time_ms: int
     execution_mode: str = "manual"
+
+
+# --- Phase 4: ETL Narrative ---
+
+
+class EtlNarrativeRequest(BaseModel):
+    etl_run_id: str
+
+
+class EtlNarrativeSectionsResponse(BaseModel):
+    resumen: str
+    calidad_original: str
+    transformaciones: str
+    resultado: str
+    recomendaciones: str
+
+
+class EtlNarrativeResponse(BaseModel):
+    id: str
+    dataset_id: str
+    etl_run_id: str
+    sections: EtlNarrativeSectionsResponse
+    execution_mode: str

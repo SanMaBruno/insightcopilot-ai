@@ -16,9 +16,46 @@ class MockLlmClient(LlmClient):
     """Cliente determinístico para desarrollo y demos sin proveedor externo."""
 
     def generate(self, system_prompt: str, user_prompt: str) -> str:
+        if "== ETL CONTEXT ==" in user_prompt:
+            return self._generate_etl_narrative(user_prompt)
         if "=== PREGUNTA ===" in user_prompt:
             return self._generate_rag_answer(user_prompt)
         return self._generate_summary(system_prompt, user_prompt)
+
+    def _generate_etl_narrative(self, user_prompt: str) -> str:
+        strategy = _extract_value(r"^Estrategia:\s*(.+)$", user_prompt, "conservative")
+        mode = _extract_value(r"^Modo de ejecución:\s*(.+)$", user_prompt, "manual")
+        rows_before = _extract_value(r"Filas:\s*(\d+)\s*→", user_prompt, "N/D")
+        rows_after = _extract_value(r"Filas:\s*\d+\s*→\s*(\d+)", user_prompt, "N/D")
+        nulls_before = _extract_value(r"Nulos:\s*(\d+)\s*→", user_prompt, "N/D")
+        nulls_after = _extract_value(r"Nulos:\s*\d+\s*→\s*(\d+)", user_prompt, "N/D")
+        exec_time = _extract_value(r"Tiempo de ejecución:\s*(\d+)ms", user_prompt, "N/D")
+
+        steps = [
+            line.strip()[2:].strip()
+            for line in user_prompt.splitlines()
+            if line.strip().startswith("- [")
+        ]
+        step_summary = f"Se registraron {len(steps)} paso(s)." if steps else "No se registraron pasos."
+
+        return (
+            "## RESUMEN\n"
+            f"[Modo demo] Se ejecutó un proceso ETL con estrategia {strategy} "
+            f"en modo {mode}. {step_summary}\n\n"
+            "## CALIDAD_ORIGINAL\n"
+            f"El dataset original contenía {rows_before} filas y {nulls_before} valores nulos, "
+            "lo que indicaba la necesidad de un proceso de limpieza.\n\n"
+            "## TRANSFORMACIONES\n"
+            f"{step_summary} Las transformaciones aplicadas buscaron mejorar "
+            "la calidad general del dataset.\n\n"
+            "## RESULTADO\n"
+            f"Tras la ejecución ({exec_time}ms), el dataset resultante contiene "
+            f"{rows_after} filas y {nulls_after} valores nulos.\n\n"
+            "## RECOMENDACIONES\n"
+            "El proceso ETL se completó satisfactoriamente. Se recomienda revisar "
+            "el dataset curado para validar los resultados obtenidos. "
+            "Esta narrativa fue generada por el cliente mock para desarrollo local."
+        )
 
     def _generate_summary(self, system_prompt: str, user_prompt: str) -> str:
         dataset_name = _extract_value(r"^Dataset:\s*(.+)$", user_prompt, "dataset")
