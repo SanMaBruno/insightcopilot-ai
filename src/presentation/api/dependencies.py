@@ -13,7 +13,9 @@ from src.infrastructure.etl.pandas_transformation_engine import PandasTransforma
 from src.infrastructure.files.csv_dataset_loader import CsvDatasetLoader
 from src.infrastructure.files.local_file_storage import LocalFileStorage
 from src.infrastructure.files.matplotlib_chart_generator import MatplotlibChartGenerator
+from src.infrastructure.llm.gemini_llm_client import GeminiLlmClient
 from src.infrastructure.llm.mock_llm_client import MockLlmClient
+from src.infrastructure.llm.ollama_llm_client import OllamaLlmClient
 from src.infrastructure.llm.openai_llm_client import OpenAiLlmClient
 from src.infrastructure.persistence.in_memory_curated_result_repository import (
     InMemoryCuratedResultRepository,
@@ -21,10 +23,11 @@ from src.infrastructure.persistence.in_memory_curated_result_repository import (
 from src.infrastructure.persistence.sqlite_dataset_repository import (
     SqliteDatasetRepository,
 )
+from src.infrastructure.rag.embedding_function import EmbeddingFunction
+from src.infrastructure.rag.gemini_embedding_function import GeminiEmbeddingFunction
 from src.infrastructure.rag.in_memory_vector_store import InMemoryVectorStore
 from src.infrastructure.rag.mock_embedding_function import MockEmbeddingFunction
 from src.infrastructure.rag.openai_embedding_function import OpenAiEmbeddingFunction
-from src.infrastructure.rag.embedding_function import EmbeddingFunction
 from src.shared.config.settings import settings
 from src.shared.config.settings import Settings
 
@@ -38,8 +41,13 @@ _curated_result_repository = InMemoryCuratedResultRepository()
 
 
 def build_embedding_function(config: Settings) -> EmbeddingFunction:
-    if config.llm_mode == "mock":
+    """Construye el proveedor de embeddings según EMBEDDING_MODE."""
+    if config.embedding_mode == "mock" or config.embedding_mode == "local":
         return MockEmbeddingFunction()
+    if config.embedding_mode == "gemini":
+        return GeminiEmbeddingFunction(
+            api_key=config.gemini_api_key, model=config.embedding_model,
+        )
     return OpenAiEmbeddingFunction(
         api_key=config.openai_api_key, model=config.embedding_model,
     )
@@ -51,10 +59,19 @@ def build_vector_store(config: Settings) -> InMemoryVectorStore:
 
 
 def build_llm_client(config: Settings) -> LlmClient:
+    """Construye el cliente LLM según LLM_MODE."""
     if config.llm_mode == "mock":
         return MockLlmClient()
+    if config.llm_mode == "gemini":
+        return GeminiLlmClient(
+            api_key=config.gemini_api_key, model=config.gemini_model,
+        )
+    if config.llm_mode == "ollama":
+        return OllamaLlmClient(
+            base_url=config.ollama_base_url, model=config.ollama_model,
+        )
     return OpenAiLlmClient(
-        api_key=config.openai_api_key, model=config.openai_model
+        api_key=config.openai_api_key, model=config.openai_model,
     )
 
 
