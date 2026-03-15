@@ -1,77 +1,49 @@
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
-
-interface ApiErrorPayload {
-  detail?: string;
-  code?: string;
-  category?: string;
-  service?: string;
-  provider?: string;
-  retryable?: boolean;
-}
-
-class ApiError extends Error {
-  status: number;
-  code?: string;
-  category?: string;
-  service?: string;
-  provider?: string;
-  retryable?: boolean;
-
-  constructor(status: number, payload: ApiErrorPayload) {
-    const message = payload.detail ?? "Error de API";
-    super(message);
-    this.status = status;
-    this.code = payload.code;
-    this.category = payload.category;
-    this.service = payload.service;
-    this.provider = payload.provider;
-    this.retryable = payload.retryable;
-  }
-}
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
   });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({} as ApiErrorPayload));
-    throw new ApiError(response.status, {
-      detail: body.detail ?? response.statusText,
-      code: body.code,
-      category: body.category,
-      service: body.service,
-      provider: body.provider,
-      retryable: body.retryable,
-    });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(error.detail ?? "API error");
   }
-
-  return response.json() as Promise<T>;
+  return res.json();
 }
 
-async function uploadFile<T>(path: string, file: File): Promise<T> {
-  const form = new FormData();
-  form.append("file", file);
-
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method: "POST",
-    body: form,
-  });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({} as ApiErrorPayload));
-    throw new ApiError(response.status, {
-      detail: body.detail ?? response.statusText,
-      code: body.code,
-      category: body.category,
-      service: body.service,
-      provider: body.provider,
-      retryable: body.retryable,
+export const api = {
+  // Datasets
+  getDatasets: () => request<import("@/types/dataset").Dataset[]>("/datasets"),
+  getDataset: (id: string) => request<import("@/types/dataset").Dataset>(`/datasets/${id}`),
+  uploadDataset: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${API_BASE}/datasets/upload`, { method: "POST", body: form }).then(async (r) => {
+      if (!r.ok) throw new Error("Upload failed");
+      return r.json() as Promise<import("@/types/dataset").Dataset>;
     });
-  }
+  },
 
-  return response.json() as Promise<T>;
-}
+  // Analysis endpoints
+  getProfile: (id: string) => request<import("@/types/dataset").DatasetProfile>(`/datasets/${id}/profile`),
+  getInsights: (id: string) => request<import("@/types/dataset").DatasetInsightReport>(`/datasets/${id}/insights`),
+  getVisualizations: (id: string) => request<import("@/types/dataset").DatasetVisualization>(`/datasets/${id}/visualizations`),
+  getExecutiveSummary: (id: string) =>
+    request<import("@/types/dataset").ExecutiveSummary>(`/datasets/${id}/executive-summary`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
 
-export { request, uploadFile, ApiError };
+  // Query endpoints
+  analyticalQuery: (id: string, query: string) =>
+    request<import("@/types/dataset").AnalyticalAnswer>(`/datasets/${id}/query`, {
+      method: "POST",
+      body: JSON.stringify({ question: query }),
+    }),
+  ragQuery: (id: string, query: string) =>
+    request<import("@/types/dataset").RagQueryResponse>(`/datasets/${id}/rag-query`, {
+      method: "POST",
+      body: JSON.stringify({ question: query }),
+    }),
+};

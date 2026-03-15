@@ -40,11 +40,7 @@ htmlcov/
 # Jupyter
 .ipynb_checkpoints/
 
-# Data (keep sample, ignore large files)
-data/raw/*
-data/processed/*
+# Data
 data/uploads/*
 !data/uploads/.gitkeep
 data/*.db
-!data/raw/.gitkeep
-!data/processed/.gitkeep

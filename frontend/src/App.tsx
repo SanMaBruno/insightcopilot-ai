@@ -1,19 +1,33 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import AppLayout from "./layouts/AppLayout";
-import HomePage from "./pages/HomePage";
-import DatasetsPage from "./pages/DatasetsPage";
-import DatasetDetailPage from "./pages/DatasetDetailPage";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import AppLayout from "@/layouts/AppLayout";
+import Home from "@/pages/Home";
+import Datasets from "@/pages/Datasets";
+import DatasetDetail from "@/pages/DatasetDetail";
+import UploadDataset from "@/pages/UploadDataset";
+import NotFound from "@/pages/NotFound";
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/datasets" element={<DatasetsPage />} />
-          <Route path="/datasets/:id" element={<DatasetDetailPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  );
-}
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/datasets" element={<Datasets />} />
+            <Route path="/datasets/:id" element={<DatasetDetail />} />
+            <Route path="/upload" element={<UploadDataset />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+export default App;
